@@ -5,15 +5,8 @@
     - name: install packages
       yum:
         name:
-          - tftp-server
           - syslinux
           - dnsmasq
-
-    - name: start tftpd services
-      systemd:
-        name: tftp
-        state: stopped
-        enabled: false
 
     - name: prepare tftp directory
       shell: "{{ item }}"
