@@ -1,0 +1,62 @@
+---
+- name: pxeboot server build
+  hosts: all
+  tasks:
+    - name: install packages
+      yum:
+        name:
+          - tftp-server
+          - syslinux
+          - dnsmasq
+
+    - name: start tftpd services
+      systemd:
+        name: tftp
+        state: stopped
+        enabled: false
+
+    - name: prepare tftp directory
+      shell: "{{ item }}"
+      with_items:
+        - "cp /usr/share/syslinux/memdisk /var/lib/tftpboot/"
+        - "cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot/"        
+        - "cp /usr/share/syslinux/menu.c32 /var/lib/tftpboot/"        
+        - "cp /usr/share/syslinux/vesamenu.c32 /var/lib/tftpboot/"        
+        - "cp /usr/share/syslinux/mboot.c32 /var/lib/tftpboot/"        
+        - "cp /usr/share/syslinux/chain.c32 /var/lib/tftpboot/"
+
+    - name: create pxeboot.cfg directory
+      file:
+        dest: /var/lib/tftpboot/pxelinux.cfg
+        state: directory
+
+    - name: create default pxeboot menu
+      copy:
+        src: files/pxelinux.cfg.default
+        dest: /var/lib/tftpboot/pxelinux.cfg/default
+
+    - name: backup dnsmasq.conf
+      copy:
+        src: /etc/dnsmasq.conf
+        dest: /etc/dnsmasq.conf.bak
+        remote_src: True
+        force: False
+
+    - name: create dnsmasq.conf
+      copy:
+        src: files/dnsmasq.conf
+        dest: /etc/dnsmasq.conf
+      notify:
+        - restart_dnsmasq
+
+    - name: start dnsmasq
+      systemd:
+        name: dnsmasq
+        state: started
+        enabled: True
+
+  handlers:
+    - name: restart_dnsmasq
+      systemd:
+        name: dnsmasq
+        state: restarted
